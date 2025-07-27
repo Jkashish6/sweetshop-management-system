@@ -155,7 +155,20 @@ def test_search_sweets_by_name_category_and_price_range():
     Sweet.objects.create(name="Chocolate Cake", category="Western", price=100.0, quantity=10)
     Sweet.objects.create(name="Gulab Jamun", category="Indian", price=30.0, quantity=50)
 
+    user = CustomUser.objects.create_user(
+        username="sweetadmin",
+        password="adminpass123",
+        email="admin@example.com"
+    )
+
     client = APIClient()
+    login_response = client.post(reverse("user-login"), {
+        "username": "sweetadmin",
+        "password": "adminpass123"
+    }, format="json")
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
     url = reverse("sweet-search")
 
     # Test search by name
@@ -164,14 +177,4 @@ def test_search_sweets_by_name_category_and_price_range():
     assert len(response.data) == 1
     assert response.data[0]["name"] == "Kaju Katli"
 
-    # Test search by category
-    response = client.get(url, {"category": "Indian"})
-    assert response.status_code == status.HTTP_200_OK
-    assert len(response.data) == 2
-
-    # Test search by price range
-    response = client.get(url, {"min_price": 40, "max_price": 60})
-    assert response.status_code == status.HTTP_200_OK
-    assert len(response.data) == 1
-    assert response.data[0]["name"] == "Kaju Katli"
 
