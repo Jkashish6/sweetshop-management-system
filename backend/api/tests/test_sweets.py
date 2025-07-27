@@ -96,7 +96,7 @@ def test_create_sweet_authenticated_user_can_add_sweet():
         "quantity": 70
     }
 
-    url = reverse("create-sweet")
+    url = reverse("sweet-list")
     response = client.post(url, sweet_data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
