@@ -38,14 +38,33 @@ def test_create_sweet_authenticated():
 
 @pytest.mark.django_db
 def test_get_all_sweets_returns_list():
-    # Setup: create some sweets
+    # Setup: create a user and authenticate
+    user = CustomUser.objects.create_user(
+        username="testuser",
+        password="strongpassword123",
+        email="test@example.com"
+    )
+
+    client = APIClient()
+
+    # Get JWT token
+    login_response = client.post(reverse("user-login"), {
+        "username": "testuser",
+        "password": "strongpassword123"
+    }, format="json")
+
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+    # Create some sweets
     Sweet.objects.create(name="Ladoo", category="Indian", price=10.5, quantity=100)
     Sweet.objects.create(name="Barfi", category="Indian", price=15.0, quantity=50)
 
-    client = APIClient()
     url = reverse("sweet-list")
     response = client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
     assert len(response.data) == 2
     assert response.data[0]["name"] == "Ladoo"
+    assert response.data[1]["name"] == "Barfi"
+
