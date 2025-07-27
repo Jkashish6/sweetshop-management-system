@@ -26,6 +26,11 @@ class SweetListCreateView(APIView):
 class SweetDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def get(self, request, pk):
+        sweet = get_object_or_404(Sweet, pk=pk)
+        serializer = SweetSerializer(sweet)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def put(self, request, pk):
         sweet = get_object_or_404(Sweet, pk=pk)
         serializer = SweetSerializer(sweet, data=request.data)
@@ -59,3 +64,39 @@ def sweet_search_view(request):
 
     serializer = SweetSerializer(sweets, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+class SweetPurchaseView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        sweet = get_object_or_404(Sweet, pk=pk)
+        quantity = request.data.get("quantity")
+
+        if not quantity or not str(quantity).isdigit() or int(quantity) <= 0:
+            return Response({"error": "Quantity must be a positive integer"}, status=400)
+
+        quantity = int(quantity)
+        if sweet.quantity < quantity:
+            return Response({"error": "Not enough stock"}, status=400)
+
+        sweet.quantity -= quantity
+        sweet.save()
+        return Response({"message": "Sweet purchased successfully", "remaining_quantity": sweet.quantity}, status=200)
+
+
+class SweetRestockView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        if not request.user.is_staff:
+            return Response({"error": "Admin only endpoint"}, status=403)
+
+        sweet = get_object_or_404(Sweet, pk=pk)
+        quantity = request.data.get("quantity")
+
+        if not quantity or not str(quantity).isdigit() or int(quantity) <= 0:
+            return Response({"error": "Quantity must be a positive integer"}, status=400)
+
+        sweet.quantity += int(quantity)
+        sweet.save()
+        return Response({"message": "Sweet restocked successfully", "updated_quantity": sweet.quantity}, status=200)

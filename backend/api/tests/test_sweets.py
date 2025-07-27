@@ -178,3 +178,60 @@ def test_search_sweets_by_name_category_and_price_range():
     assert response.data[0]["name"] == "Kaju Katli"
 
 
+@pytest.mark.django_db
+def test_get_sweet_by_id_authenticated_user():
+    user = CustomUser.objects.create_user(
+        username="sweetadmin",
+        password="adminpass123",
+        email="admin@example.com"
+    )
+    sweet = Sweet.objects.create(name="Soan Papdi", category="Indian", price=35.0, quantity=60)
+
+    client = APIClient()
+    login_response = client.post(reverse("user-login"), {
+        "username": "sweetadmin",
+        "password": "adminpass123"
+    }, format="json")
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+    url = reverse("sweet-detail", kwargs={"pk": sweet.pk})
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["name"] == "Soan Papdi"
+    assert response.data["price"] == "35.00"
+
+@pytest.mark.django_db
+def test_purchase_sweet_reduces_quantity():
+    user = CustomUser.objects.create_user(username="user1", password="pass123", email="u@example.com")
+    sweet = Sweet.objects.create(name="Rasgulla", category="Indian", price=10.0, quantity=20)
+
+    client = APIClient()
+    login = client.post(reverse("user-login"), {"username": "user1", "password": "pass123"}, format="json")
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+    response = client.post(reverse("sweet-purchase", kwargs={"pk": sweet.pk}), {"quantity": 5}, format="json")
+
+    assert response.status_code == 200
+    assert response.data["remaining_quantity"] == 15
+    sweet.refresh_from_db()
+    assert sweet.quantity == 15
+
+
+@pytest.mark.django_db
+def test_admin_can_restock_sweet():
+    admin = CustomUser.objects.create_user(username="admin", password="adminpass", email="admin@example.com", is_staff=True)
+    sweet = Sweet.objects.create(name="Barfi", category="Indian", price=15.0, quantity=10)
+
+    client = APIClient()
+    login = client.post(reverse("user-login"), {"username": "admin", "password": "adminpass"}, format="json")
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+    response = client.post(reverse("sweet-restock", kwargs={"pk": sweet.pk}), {"quantity": 5}, format="json")
+
+    assert response.status_code == 200
+    assert response.data["updated_quantity"] == 15
+    sweet.refresh_from_db()
+    assert sweet.quantity == 15
+
