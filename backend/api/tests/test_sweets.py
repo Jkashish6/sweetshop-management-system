@@ -148,3 +148,30 @@ def test_delete_sweet_authenticated_user_can_delete_sweet():
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert Sweet.objects.count() == 0
+
+@pytest.mark.django_db
+def test_search_sweets_by_name_category_and_price_range():
+    Sweet.objects.create(name="Kaju Katli", category="Indian", price=50.0, quantity=20)
+    Sweet.objects.create(name="Chocolate Cake", category="Western", price=100.0, quantity=10)
+    Sweet.objects.create(name="Gulab Jamun", category="Indian", price=30.0, quantity=50)
+
+    client = APIClient()
+    url = reverse("sweet-search")
+
+    # Test search by name
+    response = client.get(url, {"name": "Kaju"})
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]["name"] == "Kaju Katli"
+
+    # Test search by category
+    response = client.get(url, {"category": "Indian"})
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 2
+
+    # Test search by price range
+    response = client.get(url, {"min_price": 40, "max_price": 60})
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]["name"] == "Kaju Katli"
+
