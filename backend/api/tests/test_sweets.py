@@ -114,11 +114,37 @@ def test_update_sweet_authenticated_user_can_update_sweet():
     access_token = login_response.data["access"]
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
     update_data = {
-        "price": 22.5,
-        "quantity": 40
-    }
+    "name": "Jalebi",
+    "category": "Indian",
+    "price": 22.5,
+    "quantity": 40
+}
     url = reverse("sweet-detail", kwargs={"pk": sweet.pk})
     response = client.put(url, update_data, format="json")
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["price"] == 22.5
+    assert float(response.data["price"]) == 22.5
     assert response.data["quantity"] == 40
+
+@pytest.mark.django_db
+def test_delete_sweet_authenticated_user_can_delete_sweet():
+    user = CustomUser.objects.create_user(
+        username="sweetadmin",
+        password="adminpass123",
+        email="admin@example.com"
+    )
+    sweet = Sweet.objects.create(name="Peda", category="Indian", price=10.0, quantity=25)
+    
+    client = APIClient()
+    login_response = client.post(reverse("user-login"), {
+        "username": "sweetadmin",
+        "password": "adminpass123"
+    }, format="json")
+    
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+    url = reverse("sweet-detail", kwargs={"pk": sweet.pk})
+    response = client.delete(url)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert Sweet.objects.count() == 0

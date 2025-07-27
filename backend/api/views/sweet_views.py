@@ -26,7 +26,7 @@ class SweetDetailView(APIView):
 
     def put(self, request, pk):
         sweet = get_object_or_404(Sweet, pk=pk)
-        serializer = SweetSerializer(sweet, data=request.data, partial=True)
+        serializer = SweetSerializer(sweet, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
