@@ -68,3 +68,37 @@ def test_get_all_sweets_returns_list():
     assert response.data[0]["name"] == "Ladoo"
     assert response.data[1]["name"] == "Barfi"
 
+@pytest.mark.django_db
+def test_create_sweet_authenticated_user_can_add_sweet():
+    # Create user
+    user = CustomUser.objects.create_user(
+        username="sweetadmin",
+        password="adminpass123",
+        email="admin@example.com"
+    )
+
+    client = APIClient()
+
+    # Login to get JWT token
+    login_response = client.post(reverse("user-login"), {
+        "username": "sweetadmin",
+        "password": "adminpass123"
+    }, format="json")
+
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+    # Prepare sweet data
+    sweet_data = {
+        "name": "Rasgulla",
+        "category": "Bengali",
+        "price": 25.0,
+        "quantity": 70
+    }
+
+    url = reverse("create-sweet")
+    response = client.post(url, sweet_data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["name"] == "Rasgulla"
+    assert Sweet.objects.count() == 1
