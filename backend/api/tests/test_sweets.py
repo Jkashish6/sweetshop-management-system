@@ -76,18 +76,14 @@ def test_create_sweet_authenticated_user_can_add_sweet():
         password="adminpass123",
         email="admin@example.com"
     )
-
     client = APIClient()
-
     # Login to get JWT token
     login_response = client.post(reverse("user-login"), {
         "username": "sweetadmin",
         "password": "adminpass123"
     }, format="json")
-
     access_token = login_response.data["access"]
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
-
     # Prepare sweet data
     sweet_data = {
         "name": "Rasgulla",
@@ -95,10 +91,34 @@ def test_create_sweet_authenticated_user_can_add_sweet():
         "price": 25.0,
         "quantity": 70
     }
-
     url = reverse("sweet-list")
     response = client.post(url, sweet_data, format="json")
-
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data["name"] == "Rasgulla"
     assert Sweet.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_update_sweet_authenticated_user_can_update_sweet():
+    user = CustomUser.objects.create_user(
+        username="sweetadmin",
+        password="adminpass123",
+        email="admin@example.com"
+    )
+    sweet = Sweet.objects.create(name="Jalebi", category="Indian", price=20.0, quantity=30)
+    client = APIClient()
+    login_response = client.post(reverse("user-login"), {
+        "username": "sweetadmin",
+        "password": "adminpass123"
+    }, format="json")
+    access_token = login_response.data["access"]
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+    update_data = {
+        "price": 22.5,
+        "quantity": 40
+    }
+    url = reverse("sweet-detail", kwargs={"pk": sweet.pk})
+    response = client.put(url, update_data, format="json")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["price"] == 22.5
+    assert response.data["quantity"] == 40

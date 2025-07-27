@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from api.models import Sweet
 from api.serializers.sweet_serializers import SweetSerializer
+from rest_framework.generics import get_object_or_404
 
 
 class SweetListCreateView(APIView):
@@ -20,3 +21,13 @@ class SweetListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class SweetDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        sweet = get_object_or_404(Sweet, pk=pk)
+        serializer = SweetSerializer(sweet, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
